@@ -2,10 +2,14 @@ import tornado.web
 from BaseHTTPServer import BaseHTTPRequestHandler
 from StringIO import StringIO
 import json
+import logging
 from framework.lib import exceptions
 from framework.lib.exceptions import InvalidTargetReference
 from framework.lib.general import cprint
 from framework.interface import custom_handlers
+
+from http_request_translator import translator
+from http_request_translator import plugin_manager
 
 
 class PluginDataHandler(custom_handlers.APIRequestHandler):
@@ -341,6 +345,70 @@ class ForwardToZAPHandler(custom_handlers.APIRequestHandler):
         except exceptions.InvalidTargetReference as e:
                 cprint(e.parameter)
                 raise tornado.web.HTTPError(400)
+
+
+class TransformRequestHandler(custom_handlers.APIRequestHandler):
+    """Handler to transform Raw HTTP requests to scripts"""
+    SUPPORTED_METHODS = ['POST']
+
+    def get(self):
+        raise tornado.web.HTTPError(405)
+
+    def post(self, target_id=None, transaction_id=None):
+        """Receives POST request which contains the script_type requested
+
+        :param int target_id: Id of the Target for which the requests were made
+        :param int transaction_id: Id of the requests transactions
+
+        :return: None
+
+        :raises:class:`tornado.web.HTTPError`: When target_id is not available or target_id is invalid with
+            HTTP 400 code.
+
+        .. note::
+
+            Call to handler writes the generated script in response to the request.
+            If some error occurs while generation then that error is passed in the response.
+
+        """
+        if not target_id:  # does not make sense if no target id provided
+            raise tornado.web.HTTPError(400)
+        try:
+            if transaction_id:
+                script_name = self.get_argument('script_type', '')
+                request = self.get_component("transaction").GetByIDAsDict(
+                    int(transaction_id),
+                    target_id=int(target_id))
+                # Parse Raw Request into Fields
+                output = translator.parse_raw_request(str(request["raw_request"]))
+                # Check if the parsed details dict has any data field
+                if "data" not in output[1]:
+                    output[1]["data"] = None
+                try:
+                    script = plugin_manager.generate_script(script_name, output)
+                    self.write(str(script))
+                except ValueError as e:
+                    self.write("Script Generation Failed! " + str(e))
+                except ImportError as e:
+                    self.write(str(e))
+            else:  # multiple transactions
+                pass
+                # Not yet implemented
+        except exceptions.InvalidTargetReference as e:
+            logging.error(e.parameter)
+            raise tornado.web.HTTPError(400)
+
+    @tornado.web.asynchronous
+    def put(self):
+        raise tornado.web.HTTPError(405)
+
+    @tornado.web.asynchronous
+    def patch(self):
+        raise tornado.web.HTTPError(405)
+
+    @tornado.web.asynchronous
+    def delete(self, target_id=None):
+        raise tornado.web.HTTPError(405)
 
 
 class TransactionDataHandler(custom_handlers.APIRequestHandler):

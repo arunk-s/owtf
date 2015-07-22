@@ -31,6 +31,17 @@
          <button class="btn btn-warning" onClick="forwardToZAP()"><i class="fa fa-filter"></i> Forward </button>
          <button class="btn btn-default" onclick="replayRequest()"><i class="fa fa-refresh"></i> Replay </button>
          <button class="btn btn-danger launch-modal" data-toggle="modal" data-target="#ScriptModal"> Create a Zest Script ! </button>
+          <div class="btn-group pull-left">
+          <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+          <i class="fa fa-download"></i> Export <span class="caret"></span>
+          </button>
+          <ul id="fileTypes" class="dropdown-menu" >
+            <li data-file-type="python"><a href="#">Python</a></li>
+            <li data-file-type="ruby"><a href="#">Ruby</a></span></li>
+            <li data-file-type="php"><a href="#">Php</a></span></li>
+            <li data-file-type="bash"><a href="#">Bash</a></span></li>
+          </ul>
+          </div>
     </div>
 </div>
 <br />
@@ -80,6 +91,25 @@
          <button type="button" class="btn btn-primary" id="saveBtn" onclick="createZestScript()">Generate!</button>
         <button type="button" class="btn btn-default"  data-dismiss="modal">Cancel</button>
 
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Generated Script Modal -->
+<div class="modal fade" id="reqModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Generated Script</h4>
+      </div>
+      <div class="modal-body">
+      <pre class="scrollablePre" id="generated_script"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <a href="#" id="scriptBtn"><button type="button" class="btn btn-primary" onclick="saveScript('text/plain')">Save Script</button></a>
       </div>
     </div>
   </div>
@@ -164,6 +194,57 @@ function createZestScript(){
 
             });
     }
+}
+
+// Ajax request to TransformRequest Handler
+$("#fileTypes").on('click', 'li', function(event){
+  var type = $(event.currentTarget).data('file-type');
+  window.script_type = type;
+         $.ajax({
+            url:mySpace.transaction_api_url+"transform",
+            type:'POST',
+            data:{script_type:type },
+            success:show_script,
+            error:function(xhr, textStatus, serverResponse){
+            alert("Server replied: "+serverResponse);
+                }
+            });
+})
+
+// On Returning from translator show the modal to the user
+function show_script(data, Status, xhr){
+  $('#generated_script').text(data);
+  $('#reqModal').modal('show');
+}
+
+// Save the content of the script
+function saveScript(type){
+  var scriptBtn = document.getElementById("scriptBtn");
+  var filename;
+  if (typeof(window.script_type) != "undefined") {
+    filename = String(mySpace.transaction_api_url);
+    var name_array = filename.split("/");
+    // 4th field in name_array is target_id and 5th is transaction_id
+    filename = "target_"+name_array[3]+"_transaction_"+name_array[5];
+    if (window.script_type == "python"){
+      filename += ".py";
+    }
+    else if(window.script_type == "ruby"){
+      filename += ".rb";
+    }
+    else if (window.script_type == "php") {
+      filename += ".php";
+    }
+    else if (window.script_type == "bash"){
+      filename += ".sh";
+    }
+  }
+  else {
+    filename = "request.txt";
+  }
+  var file = new Blob([document.getElementById("generated_script").textContent], {type: type});
+  scriptBtn.href = URL.createObjectURL(file);
+  scriptBtn.download = filename;
 }
 
 //Checks whether file exists else success

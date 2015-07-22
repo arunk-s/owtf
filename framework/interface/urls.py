@@ -19,6 +19,7 @@ def get_handlers():
         tornado.web.url(r'/api/targets/([0-9]+)/transactions/zest/?$', api_handlers.ZestScriptHandler, name='zest_log_url'),
         tornado.web.url(r'/api/targets/([0-9]+)/transactions/zconsole/?$', api_handlers.ZestScriptHandler, name='zest_console_api_url'),
         tornado.web.url(r'/api/targets/([0-9]+)/transactions/([0-9]+)/zest/?$', api_handlers.ZestScriptHandler, name='zest_api_url'),
+        tornado.web.url(r'/api/targets/([0-9]+)/transactions/([0-9]+)/transform/?$', api_handlers.TransformRequestHandler, name='transform_request_api_url'),
         tornado.web.url(r'/api/plugins/?' + plugin_group_re + '/?' + plugin_type_re + '/?' + plugin_code_re + '/?$', api_handlers.PluginDataHandler, name='plugins_api_url'),
         tornado.web.url(r'/api/targets/search/?$', api_handlers.TargetConfigSearchHandler, name='targets_search_api_url'),
         tornado.web.url(r'/api/targets/?([0-9]+)?/?$', api_handlers.TargetConfigHandler, name='targets_api_url'),
