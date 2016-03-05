@@ -380,12 +380,12 @@ class TransformRequestHandler(custom_handlers.APIRequestHandler):
                     int(transaction_id),
                     target_id=int(target_id))
                 # Parse Raw Request into Fields
-                output = translator.parse_raw_request(str(request["raw_request"]))
+                headers, details = translator.parse_raw_request(str(request["raw_request"]))
                 # Check if the parsed details dict has any data field
-                if "data" not in output[1]:
-                    output[1]["data"] = None
+                if "data" not in details:
+                    details["data"] = None
                 try:
-                    script = plugin_manager.generate_script(script_name, output)
+                    script = plugin_manager.generate_script(script_name, headers, details)
                     self.write(str(script))
                 except ValueError as e:
                     self.write("Script Generation Failed! " + str(e))
